@@ -4,12 +4,16 @@
 // https://creativecommons.org/licenses/by-sa/4.0/
 // Requires: fontmetrics library MIT (c) 2018 Alexander Pruss
 //   (in the latter I added the function measureTextOffsets)
+//
+// Note: this is early code that needs updating to work like
+// Stencil_Text and use common functions with it.
 
 use <fontmetrics.scad>;
 
 // Radial text, spaced by actual character widths
 module Radial_Text(r, angle, message, font, size,
-                   letter_hole_support = false) {
+                   letter_hole_support = false,
+		   upside_down = false) {
     centers = function(offsets, i = 0)
         i >= len(offsets) - 1 ? [] :
             concat([(offsets[i] + offsets[i + 1]) / 2],
@@ -28,24 +32,26 @@ module Radial_Text(r, angle, message, font, size,
     char_angles = [for (offset = char_centers) angle * offset / total_width];
     char_holes_latin_ext =
         "04689@#&AÁÀÃÄÂǍȦÅBẞDÐOÓÒÕÖÔǑȮØPÞQRaáàãäâǎȧªbdðeéèëêėgoóòõöôǒȯøºpþq°";
-    char_has_holes = [for (ch = [0 : last_ch])
-                      len(search(message[ch], char_holes_latin_ext)) > 0];
+    char_holes_map =
+        [for (ch = [0 : last_ch])
+         len(search(message[ch], char_holes_latin_ext)) > 0];
 
+    //    for (ch = upside_down ? [last_ch : -1 : 0] : [0 : last_ch])
     for (ch = [0 : last_ch])
-        rotate(char_angles[ch])
-            translate([r, 0])
-                rotate(-90)
-                    mirror([1, 0])
-                        difference() {
-                            text(message[ch],
-                                 font = font,
-                                 size = size,
-                                 halign = "center");
-                            if (letter_hole_support && char_has_holes[ch]) {
-                                translate([0, size * 0.45])
-                                    square([size * 0.1, size * 1.25],
-                                            center = true);
-                            }
-                        }
-
+	let (chi = upside_down ? last_ch - ch : ch)
+            rotate(upside_down ? -char_angles[chi] : char_angles[chi])
+                translate([r, 0])
+                    rotate(upside_down ? 90 : -90)
+                        mirror([1, 0])
+                            difference() {
+                                text(message[chi],
+                                     font = font,
+                                     size = size,
+                                     halign = "center");
+                                if (letter_hole_support && char_holes_map[chi]) {
+                                    translate([0, size * 0.45])
+                                        square([size * 0.1, size * 1.25],
+                                                center = true);
+                                }
+    	                    }
 }
